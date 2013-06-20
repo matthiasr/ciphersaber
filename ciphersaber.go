@@ -8,10 +8,22 @@ import(
   "os"
 )
 
+var debug bool
+
+
 func initial_s_box(key []byte) [256]byte {
   var S [256]byte
   var i, j int
   var tmp byte
+
+  if debug {
+    fmt.Fprintf(os.Stderr, "Key: ")
+    for _, b := range key {
+      fmt.Fprintf(os.Stderr, "%x ", b)
+    }
+    fmt.Fprintf(os.Stderr, "\n")
+  }
+
   for i, _ = range S {
     S[i] = byte(i & 255)
   }
@@ -23,6 +35,15 @@ func initial_s_box(key []byte) [256]byte {
     S[i] = S[j]
     S[j] = tmp
   }
+
+  if debug {
+    fmt.Fprintf(os.Stderr, "S-Box: ")
+    for _, b := range S {
+      fmt.Fprintf(os.Stderr, "%x ", b)
+    }
+    fmt.Fprintf(os.Stderr, "\n")
+  }
+
   return S
 }
 
@@ -59,6 +80,7 @@ func writeout(out <-chan byte) {
 
 func main() {
   // decode := flag.Bool("d", false, "Decode input") /* no function because IV handling not implemented & RC4 itself is symmetric */
+  flag.BoolVar(&debug, "v", false, "Verbose output")
   flag.Parse()
   flag.Usage = func() {
     fmt.Fprintf(os.Stderr, "Usage:\n\t%s [-d] <key>", os.Args[0])
