@@ -15,7 +15,6 @@ var debug bool
 func initial_s_box(key []byte, iterations int) [256]byte {
   var S [256]byte
   var i, j int
-  var tmp byte
 
   if debug {
     fmt.Fprintf(os.Stderr, "Key: ")
@@ -33,9 +32,7 @@ func initial_s_box(key []byte, iterations int) [256]byte {
   for k := 0; k < iterations; k++ {
     for i = 0; i <= 255; i++ {
       j = (j + int(S[i]) + int(key[i % len(key)])) & 255
-      tmp = S[i]
-      S[i] = S[j]
-      S[j] = tmp
+      S[i], S[j] = S[j], S[i]
     }
   }
 
@@ -53,14 +50,12 @@ func initial_s_box(key []byte, iterations int) [256]byte {
 func rc4_stream(key []byte, iterations int, out chan<- byte) {
   S := initial_s_box(key, iterations)
   var i, j int
-  var tmp byte
 
   for {
     i = (i + 1) & 255
     j = (j + int(S[i])) & 255
-    tmp = S[i]
-    S[i] = S[j]
-    S[j] = tmp
+    S[i], S[j] = S[j], S[i]
+
     out<- S[(S[i] + S[j]) & 255]
   }
 }
