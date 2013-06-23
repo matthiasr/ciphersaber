@@ -54,7 +54,7 @@ func rc4_stream(key []byte, out chan<- byte) {
 
   for {
     i = (i + 1) & 255
-    j = (j + int(S[j])) & 255
+    j = (j + int(S[i])) & 255
     tmp = S[i]
     S[i] = S[j]
     S[j] = tmp
