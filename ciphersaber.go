@@ -12,7 +12,7 @@ import(
 var debug bool
 
 
-func initial_s_box(key []byte) [256]byte {
+func initial_s_box(key []byte, iterations int) [256]byte {
   var S [256]byte
   var i, j int
   var tmp byte
@@ -30,11 +30,13 @@ func initial_s_box(key []byte) [256]byte {
   }
 
   j = 0
-  for i = 0; i <= 255; i++ {
-    j = (j + int(S[i]) + int(key[i % len(key)])) & 255
-    tmp = S[i]
-    S[i] = S[j]
-    S[j] = tmp
+  for k := 0; k < iterations; k++ {
+    for i = 0; i <= 255; i++ {
+      j = (j + int(S[i]) + int(key[i % len(key)])) & 255
+      tmp = S[i]
+      S[i] = S[j]
+      S[j] = tmp
+    }
   }
 
   if debug {
@@ -48,8 +50,8 @@ func initial_s_box(key []byte) [256]byte {
   return S
 }
 
-func rc4_stream(key []byte, out chan<- byte) {
-  S := initial_s_box(key)
+func rc4_stream(key []byte, iterations int, out chan<- byte) {
+  S := initial_s_box(key, iterations)
   var i, j int
   var tmp byte
 
@@ -63,9 +65,9 @@ func rc4_stream(key []byte, out chan<- byte) {
   }
 }
 
-func encode(key []byte, in <-chan byte, out chan<- byte) {
+func encode(key []byte, iterations int, in <-chan byte, out chan<- byte) {
   rc4 := make(chan byte)
-  go rc4_stream(key, rc4)
+  go rc4_stream(key, iterations, rc4)
 
   for b := range in {
     out<- ( b ^ <-rc4 )
@@ -91,6 +93,7 @@ func main() {
   // decode := flag.Bool("d", false, "Decode input") /* no function because IV handling not implemented & RC4 itself is symmetric */
   flag.BoolVar(&debug, "v", false, "Verbose output")
   decode := flag.Bool("d", false, "Decode")
+  iterations := flag.Int("n", 1, "Iterations (for CipherSaber 2)")
   flag.Parse()
   flag.Usage = func() {
     fmt.Fprintf(os.Stderr, "Usage:\n\t%s [-d] <key>", os.Args[0])
@@ -129,7 +132,7 @@ func main() {
   copy(key, user_key)
   copy(key[len(user_key):], IV)
 
-  go encode(key, in, out)
+  go encode(key, *iterations, in, out)
 
   for {
     b, err := stdin.ReadByte()
