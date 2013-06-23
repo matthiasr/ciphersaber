@@ -113,5 +113,8 @@ func main() {
     }
     in<- b
   }
+
+  close(in)
+  // out will be closed by encode()
 }
 
