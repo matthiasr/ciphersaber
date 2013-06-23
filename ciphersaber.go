@@ -72,12 +72,8 @@ func encode(key []byte, in <-chan byte, out chan<- byte) {
   close(out)
 }
 
-func writeout(out <-chan byte) {
+func writeout(out <-chan byte, done chan<- bool) {
   stdout := bufio.NewWriter(os.Stdout)
-
-  defer func() {
-    stdout.Flush()
-  }()
 
   for b := range out {
     err := stdout.WriteByte(b)
@@ -85,6 +81,9 @@ func writeout(out <-chan byte) {
       panic(err)
     }
   }
+
+  stdout.Flush()
+  done<- true
 }
 
 func main() {
@@ -99,8 +98,9 @@ func main() {
 
   in := make(chan byte)
   out := make(chan byte)
+  done := make(chan bool)
   go encode(key, in, out)
-  go writeout(out)
+  go writeout(out, done)
 
   stdin := bufio.NewReader(os.Stdin)
 
@@ -116,5 +116,6 @@ func main() {
 
   close(in)
   // out will be closed by encode()
+  <-done //wait for output goroutine to finalize
 }
 
