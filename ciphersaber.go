@@ -2,6 +2,7 @@ package main
 
 import(
   "bufio"
+  "crypto/rand"
   "flag"
   "fmt"
   "io"
@@ -89,20 +90,46 @@ func writeout(out <-chan byte, done chan<- bool) {
 func main() {
   // decode := flag.Bool("d", false, "Decode input") /* no function because IV handling not implemented & RC4 itself is symmetric */
   flag.BoolVar(&debug, "v", false, "Verbose output")
+  decode := flag.Bool("d", false, "Decode")
   flag.Parse()
   flag.Usage = func() {
     fmt.Fprintf(os.Stderr, "Usage:\n\t%s [-d] <key>", os.Args[0])
     flag.PrintDefaults()
   }
-  key := []byte(flag.Arg(0))
+
+  stdin := bufio.NewReader(os.Stdin)
 
   in := make(chan byte)
   out := make(chan byte)
   done := make(chan bool)
-  go encode(key, in, out)
+
   go writeout(out, done)
 
-  stdin := bufio.NewReader(os.Stdin)
+  IV := make([]byte, 10)
+  var err error
+  if *decode {
+    for i, _ := range IV {
+      IV[i], err = stdin.ReadByte()
+      if err != nil {
+        panic(err)
+      }
+    }
+  } else {
+    n, err := io.ReadFull(rand.Reader, IV)
+    if n != 10 || err != nil {
+      panic(err)
+    }
+    for _, b := range IV {
+      out<- b
+    }
+  }
+
+  user_key := []byte(flag.Arg(0))
+  key := make([]byte, len(user_key) + 10)
+  copy(key, user_key)
+  copy(key[len(user_key):], IV)
+
+  go encode(key, in, out)
 
   for {
     b, err := stdin.ReadByte()
