@@ -73,8 +73,17 @@ func encode(key []byte, in <-chan byte, out chan<- byte) {
 }
 
 func writeout(out <-chan byte) {
+  stdout := bufio.NewWriter(os.Stdout)
+
+  defer func() {
+    stdout.Flush()
+  }()
+
   for b := range out {
-    fmt.Printf("%x ", b)
+    err := stdout.WriteByte(b)
+    if err != nil {
+      panic(err)
+    }
   }
 }
 
